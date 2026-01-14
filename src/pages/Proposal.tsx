@@ -3,12 +3,15 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check, CreditCard, Download, FileText, Loader2, Rocket, ShieldCheck, Info } from 'lucide-react';
+import type { Database } from '../types/supabase';
+
+type Lead = Database['public']['Tables']['leads']['Row'];
 
 const Proposal = () => {
     const { id } = useParams();
-    const [lead, setLead] = useState<any>(null);
+    const [lead, setLead] = useState<Lead | null>(null);
     const [loading, setLoading] = useState(true);
-    const [prices, setPrices] = useState<any>({});
+    const [prices, setPrices] = useState<Record<string, number>>({});
     const [acceptedContract, setAcceptedContract] = useState(false);
     const [showTerms, setShowTerms] = useState(false);
     const navigate = useNavigate();
@@ -25,7 +28,7 @@ const Proposal = () => {
 
             // Fetch prices from config
             const { data: configData } = await supabase.from('config').select('*').eq('key', 'base_prices').single();
-            if (configData) setPrices(configData.value);
+            if (configData) setPrices(configData.value as Record<string, number>);
 
             setLoading(false);
         };
@@ -56,8 +59,8 @@ const Proposal = () => {
         </div>
     );
 
-    const basePrice = prices[lead.project_type] || 5000;
-    const deliveryTime = lead.project_type === 'ai' ? '4 a 6 semanas' : '3 a 5 semanas';
+    const basePrice = prices[lead?.project_type as string] || 5000;
+    const deliveryTime = lead?.project_type === 'ai' ? '4 a 6 semanas' : '3 a 5 semanas';
 
     return (
         <div style={{ minHeight: '100vh', background: 'var(--background)', color: 'white', padding: '4rem 1rem' }}>
@@ -66,7 +69,7 @@ const Proposal = () => {
                     <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
                         <FileText size={48} color="var(--accent)" style={{ marginBottom: '1.5rem' }} />
                         <h1 style={{ fontSize: '3.5rem', fontWeight: 900, letterSpacing: '-0.05em' }}>Proposta Técnica</h1>
-                        <p style={{ color: 'var(--muted-foreground)', fontSize: '1.25rem' }}>Para: <span style={{ color: 'white', fontWeight: 700 }}>{lead.company}</span> ({lead.name})</p>
+                        <p style={{ color: 'var(--muted-foreground)', fontSize: '1.25rem' }}>Para: <span style={{ color: 'white', fontWeight: 700 }}>{lead?.company}</span> ({lead?.name})</p>
                     </motion.div>
                 </header>
 
@@ -79,7 +82,7 @@ const Proposal = () => {
                             <img src="/gyoda_hero_tech_abstract_1768306538996.png" alt="Engineering" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         </div>
                         <div style={{ padding: '2rem', background: 'rgba(255,255,255,0.03)', borderRadius: '1.25rem', border: '1px solid var(--border)', lineHeight: '1.6' }}>
-                            <p style={{ color: '#d1d1d6', margin: 0 }}>{lead.requirements}</p>
+                            <p style={{ color: '#d1d1d6', margin: 0 }}>{lead?.requirements}</p>
                         </div>
                     </section>
 

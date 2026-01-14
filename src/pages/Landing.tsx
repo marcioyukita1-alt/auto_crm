@@ -1,4 +1,4 @@
-import { ArrowRight, Code2, Cpu, Globe, Infinity } from 'lucide-react';
+import { ArrowRight, Code2, Cpu, Globe, Infinity as InfinityIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
@@ -81,7 +81,7 @@ const Landing = () => {
                             image="/gyoda_ai_cloud_secure_1768306574843.png"
                         />
                         <FeatureCard
-                            icon={<Infinity />}
+                            icon={<InfinityIcon />}
                             title="DevOps & Cloud"
                             description="Infraestrutura resiliente preparada para milhões de requisições simultâneas."
                             image="/gyoda_devops_servers_1768307721351.png"

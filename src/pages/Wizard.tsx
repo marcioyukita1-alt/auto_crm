@@ -18,7 +18,7 @@ interface WizardStep {
 
 const Wizard = () => {
     const [step, setStep] = useState(0);
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState<Record<string, string>>({
         name: '',
         email: '',
         company: '',
@@ -93,8 +93,8 @@ const Wizard = () => {
 
             if (error) throw error;
             navigate(`/proposal/${data.id}`);
-        } catch (error: any) {
-            alert(error.message);
+        } catch (error) {
+            alert(error instanceof Error ? error.message : 'Ocorreu um erro inesperado');
         } finally {
             setLoading(false);
         }
@@ -105,7 +105,7 @@ const Wizard = () => {
     return (
         <div style={{ minHeight: '100vh', display: 'flex', background: 'var(--background)' }}>
             {/* Sidebar Image */}
-            <div style={{ flex: 1, position: 'relative', overflow: 'hidden', display: 'none', lg: 'block' }}>
+            <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }} className="wizard-sidebar-desktop">
                 <img
                     src="/gyoda_wizard_sidebar_1768307751860.png"
                     alt="Onboarding"
@@ -156,7 +156,7 @@ const Wizard = () => {
                                         <input
                                             className="input"
                                             type={f.type || 'text'}
-                                            value={(formData as any)[f.key]}
+                                            value={formData[f.key] || ''}
                                             onChange={(e) => setFormData({ ...formData, [f.key]: e.target.value })}
                                             placeholder={f.placeholder}
                                             style={{ padding: '1.25rem' }}
@@ -188,8 +188,8 @@ const Wizard = () => {
                                         <textarea
                                             className="input"
                                             style={{ minHeight: '200px', padding: '1.5rem', resize: 'none' }}
-                                            value={(formData as any)[currentStep.field || '']}
-                                            onChange={(e) => setFormData({ ...formData, [currentStep.field as keyof typeof formData]: e.target.value })}
+                                            value={formData[currentStep.field || ''] || ''}
+                                            onChange={(e) => setFormData({ ...formData, [currentStep.field as string]: e.target.value })}
                                             placeholder={currentStep.placeholder}
                                         />
                                     </div>
@@ -229,10 +229,10 @@ const Wizard = () => {
             {/* Global style for temporary media queries in inline styles approach */}
             <style>{`
                 @media (max-width: 1024px) {
-                    div[style*="lg: 'block'"] { display: none !important; }
+                    .wizard-sidebar-desktop { display: none !important; }
                 }
                 @media (min-width: 1025px) {
-                    div[style*="lg: 'block'"] { display: block !important; }
+                    .wizard-sidebar-desktop { display: block !important; }
                 }
             `}</style>
         </div>

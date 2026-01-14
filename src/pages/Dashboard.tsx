@@ -2,11 +2,23 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Users, Settings, LogOut, TrendingUp, DollarSign, Eye, Save, CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import type { Database, Json } from '../types/supabase';
+
+type Lead = Database['public']['Tables']['leads']['Row'];
+type Config = {
+    base_prices: Record<string, number>;
+    proposal_template: {
+        footer: string;
+    };
+};
 
 const Dashboard = () => {
     const [activeTab, setActiveTab] = useState('leads');
-    const [leads, setLeads] = useState<any[]>([]);
-    const [config, setConfig] = useState<any>({});
+    const [leads, setLeads] = useState<Lead[]>([]);
+    const [config, setConfig] = useState<Config>({
+        base_prices: { web: 5000, mobile: 7000, ai: 12000 },
+        proposal_template: { footer: 'GYODA Softwares - 2026' }
+    });
     const [saving, setSaving] = useState(false);
     const [success, setSuccess] = useState(false);
     const navigate = useNavigate();
@@ -22,8 +34,11 @@ const Dashboard = () => {
 
         // Fetch Config
         const { data: configData } = await supabase.from('config').select('*');
-        const configObj = configData?.reduce((acc: any, curr: any) => ({ ...acc, [curr.key]: curr.value }), {});
-        setConfig(configObj || { base_prices: { web: 5000, mobile: 7000, ai: 12000 }, proposal_template: { footer: 'GYODA Softwares - 2026' } });
+        const configObj = configData?.reduce<Record<string, Json>>((acc, curr) => ({ ...acc, [curr.key]: curr.value }), {});
+        if (configObj) setConfig({
+            base_prices: (configObj.base_prices as Record<string, number>) || { web: 5000, mobile: 7000, ai: 12000 },
+            proposal_template: (configObj.proposal_template as { footer: string }) || { footer: 'GYODA Softwares - 2026' }
+        });
     };
 
     const handleSaveConfig = async () => {
@@ -44,8 +59,8 @@ const Dashboard = () => {
 
     const stats = {
         totalLeads: leads.length,
-        conversion: leads.filter(l => l.status === 'paid').length,
-        revenue: leads.filter(l => l.status === 'paid').reduce((acc, curr) => acc + (config.base_prices?.[curr.project_type] || 0), 0)
+        conversion: leads.filter((l: Lead) => l.status === 'paid').length,
+        revenue: leads.filter((l: Lead) => l.status === 'paid').reduce((acc: number, curr: Lead) => acc + (config.base_prices?.[curr.project_type as string] || 0), 0)
     };
 
     return (
@@ -87,7 +102,7 @@ const Dashboard = () => {
                 {activeTab === 'leads' ? (
                     <div style={{ display: 'grid', gap: '1.25rem' }}>
                         {leads.length === 0 && <p style={{ textAlign: 'center', padding: '4rem', color: 'var(--muted-foreground)' }}>Nenhum lead capturado ainda.</p>}
-                        {leads.map(lead => (
+                        {leads.map((lead: Lead) => (
                             <div key={lead.id} className="feature-card" style={{ padding: '1.5rem 3rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid var(--border)', background: 'rgba(255,255,255,0.02)' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
                                     <div style={{ width: '60px', height: '60px', background: 'var(--background)', borderRadius: '1.25rem', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', fontWeight: 900, color: 'var(--accent)', borderLeft: '5px solid var(--accent)' }}>
@@ -181,21 +196,21 @@ const Dashboard = () => {
     );
 };
 
-const NavItem = ({ active, icon, label, onClick }: any) => (
+const NavItem = ({ active, icon, label, onClick }: { active: boolean, icon: React.ReactNode, label: string, onClick: () => void }) => (
     <button onClick={onClick} className="btn" style={{ background: active ? 'rgba(59, 130, 246, 0.1)' : 'transparent', color: active ? 'white' : 'var(--muted-foreground)', justifyContent: 'flex-start', padding: '1.25rem 1.5rem', border: active ? '1px solid rgba(59, 130, 246, 0.3)' : '1px solid transparent', borderRadius: '1rem', width: '100%', gap: '1rem' }}>
         <div style={{ color: active ? 'var(--accent)' : 'inherit' }}>{icon}</div>
         <span style={{ fontSize: '1.1rem', fontWeight: active ? 700 : 500 }}>{label}</span>
     </button>
 );
 
-const StatSmall = ({ label, value, accent }: any) => (
+const StatSmall = ({ label, value, accent }: { label: string, value: string | number, accent?: boolean }) => (
     <div style={{ textAlign: 'right' }}>
         <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--muted-foreground)', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.1em' }}>{label}</div>
         <div style={{ fontSize: '2.5rem', fontWeight: 900, color: accent ? 'var(--accent)' : 'white' }}>{value}</div>
     </div>
 );
 
-const PriceInput = ({ label, value, onChange }: any) => {
+const PriceInput = ({ label, value, onChange }: { label: string, value: number, onChange: (v: number) => void }) => {
     return (
         <div className="input-group" style={{ margin: 0 }}>
             <label className="label" style={{ marginBottom: '1rem' }}>{label}</label>

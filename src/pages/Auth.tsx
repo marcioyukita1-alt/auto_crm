@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Loader2, Lock, Code2, ShieldCheck } from 'lucide-react';
+import { Loader2, Code2, ShieldCheck } from 'lucide-react';
 
 const Auth = () => {
     const [email, setEmail] = useState('');
@@ -32,8 +32,8 @@ const Auth = () => {
                 if (error) throw error;
                 navigate('/dashboard');
             }
-        } catch (error: any) {
-            alert(error.message);
+        } catch (error) {
+            alert(error instanceof Error ? error.message : 'Ocorreu um erro inesperado');
         } finally {
             setLoading(false);
         }
@@ -42,7 +42,7 @@ const Auth = () => {
     return (
         <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--background)' }}>
             {/* Split Screen Image */}
-            <div style={{ flex: 1.2, position: 'relative', overflow: 'hidden', display: 'none', lg: 'block' }}>
+            <div style={{ flex: 1.2, position: 'relative', overflow: 'hidden' }} className="auth-hero-desktop">
                 <img
                     src="/gyoda_hero_tech_abstract_1768306538996.png"
                     alt="GYODA Secure"
@@ -131,10 +131,10 @@ const Auth = () => {
 
             <style>{`
                 @media (max-width: 1024px) {
-                    div[style*="lg: 'block'"] { display: none !important; }
+                    .auth-hero-desktop { display: none !important; }
                 }
                 @media (min-width: 1025px) {
-                    div[style*="lg: 'block'"] { display: block !important; }
+                    .auth-hero-desktop { display: block !important; }
                 }
             `}</style>
         </div>
