@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, ArrowRight, Code2, Loader2, Sparkles, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Loader2, Sparkles, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface WizardStep {
@@ -126,8 +126,8 @@ const Wizard = () => {
             {/* Form Section */}
             <div style={{ flex: 1.2, display: 'flex', flexDirection: 'column', padding: '4rem' }}>
                 <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6rem' }}>
-                    <div className="logo" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
-                        <Code2 size={24} color="var(--accent)" />
+                    <div className="logo" onClick={() => navigate('/')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <img src="/logo_g.svg" alt="Gyoda Logo" style={{ width: '28px', height: '28px', objectFit: 'contain' }} />
                         <span className="logo-text" style={{ fontSize: '1.25rem' }}>GYODA</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>

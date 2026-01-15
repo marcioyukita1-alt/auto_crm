@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Loader2, Code2, ShieldCheck } from 'lucide-react';
+import { Loader2, ShieldCheck } from 'lucide-react';
 
 const Auth = () => {
     const [email, setEmail] = useState('');
@@ -26,11 +26,11 @@ const Auth = () => {
                     }
                 });
                 if (error) throw error;
-                navigate('/dashboard');
+                navigate('/admin');
             } else {
                 const { error } = await supabase.auth.signInWithPassword({ email, password });
                 if (error) throw error;
-                navigate('/dashboard');
+                navigate('/admin');
             }
         } catch (error) {
             alert(error instanceof Error ? error.message : 'Ocorreu um erro inesperado');
@@ -62,8 +62,8 @@ const Auth = () => {
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '4rem' }}>
                 <div style={{ maxWidth: '400px', width: '100%' }}>
                     <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
-                        <div className="logo" style={{ justifyContent: 'center', marginBottom: '1.5rem', cursor: 'pointer' }} onClick={() => navigate('/')}>
-                            <Code2 size={40} color="var(--accent)" />
+                        <div className="logo" style={{ justifyContent: 'center', marginBottom: '1.5rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '12px' }} onClick={() => navigate('/')}>
+                            <img src="/logo_g.svg" alt="Gyoda Logo" style={{ width: '64px', height: '64px', objectFit: 'contain' }} />
                             <span className="logo-text" style={{ fontSize: '2rem' }}>GYODA</span>
                         </div>
                         <h1 style={{ fontSize: '2rem', fontWeight: 900, letterSpacing: '-0.05em' }}>{isSignUp ? 'Configurar Credenciais' : 'Entrar na Plataforma'}</h1>
