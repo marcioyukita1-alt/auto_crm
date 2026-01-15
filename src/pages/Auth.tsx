@@ -1,7 +1,9 @@
+
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Loader2, ShieldCheck } from 'lucide-react';
+import SEO from '../components/SEO';
 
 const Auth = () => {
     const [email, setEmail] = useState('');
@@ -41,6 +43,7 @@ const Auth = () => {
 
     return (
         <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--background)' }}>
+            <SEO title="Entrar" description="Acesse sua conta Gyoda para gerenciar seus projetos." />
             {/* Split Screen Image */}
             <div style={{ flex: 1.2, position: 'relative', overflow: 'hidden' }} className="auth-hero-desktop">
                 <img
@@ -130,13 +133,13 @@ const Auth = () => {
             </div>
 
             <style>{`
-                @media (max-width: 1024px) {
-                    .auth-hero-desktop { display: none !important; }
-                }
-                @media (min-width: 1025px) {
-                    .auth-hero-desktop { display: block !important; }
-                }
-            `}</style>
+@media(max-width: 1024px) {
+    .auth-hero-desktop { display: none !important; }
+}
+@media(min-width: 1025px) {
+    .auth-hero-desktop { display: block !important; }
+}
+`}</style>
         </div>
     );
 };

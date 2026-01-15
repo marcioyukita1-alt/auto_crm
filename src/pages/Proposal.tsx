@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import SEO from '../components/SEO';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check, CreditCard, Download, FileText, Loader2, Rocket, ShieldCheck, Info } from 'lucide-react';
 import type { Database } from '../types/supabase';
@@ -64,6 +65,7 @@ const Proposal = () => {
 
     return (
         <div style={{ minHeight: '100vh', background: 'var(--background)', color: 'white', padding: '4rem 1rem' }}>
+            <SEO title="Proposta Técnica" />
             <div className="container" style={{ maxWidth: '800px' }}>
                 <header style={{ textAlign: 'center', marginBottom: '4rem' }}>
                     <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
@@ -127,7 +129,7 @@ const Proposal = () => {
                             <button className="btn btn-outline btn-lg" style={{ color: 'white' }}><Download size={20} /> PDF</button>
                             <button
                                 onClick={handlePayment}
-                                className={`btn btn-lg ${acceptedContract ? 'btn-accent' : ''}`}
+                                className={`btn btn-lg ${acceptedContract ? 'btn-accent' : ''} `}
                                 style={{ opacity: acceptedContract ? 1 : 0.5, cursor: acceptedContract ? 'pointer' : 'not-allowed', padding: '1rem 2rem' }}
                             >
                                 <CreditCard size={20} /> Iniciar Projeto Agora

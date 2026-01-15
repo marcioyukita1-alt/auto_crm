@@ -1,7 +1,8 @@
-import { ArrowRight, Cpu, Globe, Infinity as InfinityIcon, X } from 'lucide-react';
+import { Cpu, Globe, Infinity as InfinityIcon, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useEffect, useState } from 'react';
 import { EmbeddedChat } from '../components/GeminiChat';
+import SEO from '../components/SEO';
 
 const TECH_DETAILS = {
     "Web Apps": {
@@ -36,17 +37,21 @@ const Landing = () => {
 
     return (
         <div className="landing-page">
+            <SEO
+                title="Início"
+                description="Transformamos ideias em sistemas de alta performance. Especialistas em web apps, IA e DevOps."
+            />
             {/* Navigation */}
-            <nav className={`navbar ${scrolled ? 'scrolled' : ''}`}>
+            <nav className={`navbar ${scrolled ? 'scrolled' : ''}`} role="navigation" aria-label="Navegação principal">
                 <div className="container nav-content">
                     <div className="logo">
                         <div className="logo-icon">
-                            <img src="/logo_g.svg" alt="Gyoda Logo" style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
+                            <img src="/logo_g.svg" alt="Gyoda - Desenvolvimento de Software de Elite" style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
                         </div>
                         <span className="logo-text">GYODA</span>
                     </div>
                     <div className="nav-links">
-                        <a href="#services" className="nav-link">Serviços</a>
+                        <a href="#services" className="nav-link" aria-label="Ir para seção de serviços">Serviços</a>
                     </div>
                 </div>
             </nav>
@@ -54,7 +59,7 @@ const Landing = () => {
             {/* Hero Section */}
             <header className="hero">
                 <div className="container">
-                    <div className="hero-content">
+                    <article className="hero-content">
                         <motion.div
                             initial={{ opacity: 0, y: 30 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -76,12 +81,13 @@ const Landing = () => {
                             transition={{ duration: 1, delay: 0.2 }}
                             style={{ marginTop: '4rem', borderRadius: '2rem', overflow: 'hidden', border: '1px solid var(--border)', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }}
                         >
-                            <img src="/gyoda_hero_tech_abstract_1768306538996.png" alt="Tech Architecture" style={{ width: '100%', height: 'auto', display: 'block' }} />
+                            <img src="/gyoda_hero_tech_abstract_1768306538996.png" alt="Arquitetura tecnológica moderna com React, Node.js e Cloud Computing" style={{ width: '100%', height: 'auto', display: 'block' }} />
                         </motion.div>
-                    </div>
+                    </article>
 
                     {/* Features Grid (Social Proof / Capability) */}
-                    <div className="features-grid" id="services">
+                    <section className="features-grid" id="services" aria-label="Nossos serviços">
+                        <h2 className="sr-only">Serviços de Desenvolvimento de Software</h2>
                         <FeatureCard
                             icon={<Globe />}
                             title="Web Apps"
@@ -103,11 +109,11 @@ const Landing = () => {
                             image="/gyoda_devops_servers_1768307721351.png"
                             onClick={() => setSelectedTech("DevOps & Cloud")}
                         />
-                    </div>
+                    </section>
                 </div>
 
                 {/* Embedded Chat Section */}
-                <div className="container" style={{ marginTop: '8rem', paddingBottom: '8rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <section className="container" style={{ marginTop: '8rem', paddingBottom: '8rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }} aria-label="Contato via chat">
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         whileInView={{ opacity: 1, y: 0 }}
@@ -132,7 +138,7 @@ const Landing = () => {
                     >
                         <EmbeddedChat />
                     </motion.div>
-                </div>
+                </section>
             </header>
 
             {/* Modal */}
@@ -242,11 +248,10 @@ const FeatureCard = ({ icon, title, description, image, onClick }: { icon: React
         </div>
         <h3 className="feature-title">{title}</h3>
         <p className="feature-description" style={{ flex: 1 }}>{description}</p>
-        <div style={{ marginTop: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--accent)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Saiba Mais <ArrowRight size={14} />
-        </div>        {image && (
+
+        {image && (
             <div style={{ marginTop: '1.5rem', borderRadius: '1rem', overflow: 'hidden', border: '1px solid var(--border)' }}>
-                <img src={image} alt={title} style={{ width: '100%', height: '150px', objectFit: 'cover' }} />
+                <img src={image} alt={`${title} - Ilustração de ${description}`} style={{ width: '100%', height: '150px', objectFit: 'cover' }} />
             </div>
         )}
     </motion.div>

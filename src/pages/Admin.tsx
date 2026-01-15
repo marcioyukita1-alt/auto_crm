@@ -16,6 +16,7 @@ import {
     X
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import SEO from '../components/SEO';
 
 interface Lead {
     id: string;
@@ -325,6 +326,7 @@ export default function Admin() {
 
     return (
         <div className="fixed inset-0 bg-[#050507] overflow-hidden">
+            <SEO title="Admin Dashboard" />
             <div
                 className="bg-[#0a0a0c] text-white overflow-hidden font-sans relative border border-white/[0.08]"
                 style={{

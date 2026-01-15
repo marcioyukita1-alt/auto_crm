@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, ArrowRight, Loader2, Sparkles, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import SEO from '../components/SEO';
 
 interface WizardStep {
     id: string;
@@ -92,7 +93,7 @@ const Wizard = () => {
             }).select().single();
 
             if (error) throw error;
-            navigate(`/proposal/${data.id}`);
+            navigate(`/ proposal / ${data.id} `);
         } catch (error) {
             alert(error instanceof Error ? error.message : 'Ocorreu um erro inesperado');
         } finally {
@@ -103,8 +104,10 @@ const Wizard = () => {
     const currentStep = steps[step];
 
     return (
-        <div style={{ minHeight: '100vh', display: 'flex', background: 'var(--background)' }}>
-            {/* Sidebar Image */}
+        <div className="min-h-screen bg-[#050507] text-white flex overflow-hidden font-sans selection:bg-blue-500/30 selection:text-blue-200">
+            <SEO title="Novo Projeto" description="Descreva seu projeto para receber uma proposta personalizada." />
+
+            {/* Sidebar - Permanent on Desktop */}
             <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }} className="wizard-sidebar-desktop">
                 <img
                     src="/gyoda_wizard_sidebar_1768307751860.png"
@@ -167,7 +170,7 @@ const Wizard = () => {
                                 {currentStep.options?.map(opt => (
                                     <button
                                         key={opt.value}
-                                        className={`btn ${formData.project_type === opt.value || formData.budget_range === opt.value ? 'btn-accent' : 'btn-outline'}`}
+                                        className={`btn ${formData.project_type === opt.value || formData.budget_range === opt.value ? 'btn-accent' : 'btn-outline'} `}
                                         style={{ justifyContent: 'flex-start', padding: '1.5rem 2rem', border: '1px solid var(--border)', color: 'white' }}
                                         onClick={() => {
                                             if (currentStep.id === 'type') setFormData({ ...formData, project_type: opt.value });
@@ -228,13 +231,13 @@ const Wizard = () => {
 
             {/* Global style for temporary media queries in inline styles approach */}
             <style>{`
-                @media (max-width: 1024px) {
-                    .wizard-sidebar-desktop { display: none !important; }
-                }
-                @media (min-width: 1025px) {
-                    .wizard-sidebar-desktop { display: block !important; }
-                }
-            `}</style>
+@media(max-width: 1024px) {
+    .wizard-sidebar-desktop { display: none!important; }
+}
+@media(min-width: 1025px) {
+    .wizard-sidebar-desktop { display: block!important; }
+}
+`}</style>
         </div>
     );
 };

@@ -1,0 +1,10 @@
+# Gyoda - Robots.txt
+# Permitir acesso de todos os crawlers às páginas públicas
+
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /dashboard
+
+# Sitemap
+Sitemap: https://gyoda.pages.dev/sitemap.xml
