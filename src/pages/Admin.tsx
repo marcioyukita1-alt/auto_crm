@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    LayoutDashboard,
     MessageSquare,
     Users,
     Search,
@@ -11,10 +10,10 @@ import {
     LogOut,
     ChevronRight,
     TrendingUp,
-    Filter,
     Menu,
     Trash2,
-    Loader2
+    Loader2,
+    X
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
