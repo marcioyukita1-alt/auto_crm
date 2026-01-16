@@ -13,7 +13,9 @@ import {
     Menu,
     Trash2,
     Loader2,
-    X
+    X,
+    Headset,
+    Send
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import SEO from '../components/SEO';
@@ -23,6 +25,7 @@ interface Lead {
     name: string | null;
     email: string | null;
     company: string | null;
+    whatsapp: string | null;
     project_type: string | null;
     budget_range: string | null;
     status: string | null;
@@ -46,11 +49,14 @@ interface ChatSession {
 }
 
 export default function Admin() {
-    const [activeTab, setActiveTab] = useState<'leads' | 'chats' | 'settings'>('leads');
+    const [activeTab, setActiveTab] = useState<'leads' | 'chats' | 'support' | 'settings'>('leads');
     const [leads, setLeads] = useState<Lead[]>([]);
     const navigate = useNavigate();
     const [sessions, setSessions] = useState<ChatSession[]>([]);
     const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+    const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
+    const [supportMessages, setSupportMessages] = useState<any[]>([]);
+    const [supportInput, setSupportInput] = useState('');
     const [aiInstructions, setAiInstructions] = useState<string>('');
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -132,6 +138,64 @@ export default function Admin() {
             setLoading(false);
         }
     }, []);
+
+    // Fetch Support Messages when lead is selected
+    useEffect(() => {
+        if (!selectedLeadId) {
+            setSupportMessages([]);
+            return;
+        }
+
+        const fetchSupportMessages = async () => {
+            const { data } = await supabase
+                .from('support_messages')
+                .select('*')
+                .eq('lead_id', selectedLeadId)
+                .order('created_at', { ascending: true });
+
+            if (data) setSupportMessages(data);
+        };
+
+        fetchSupportMessages();
+
+        const subscription = supabase
+            .channel(`admin_support_${selectedLeadId}`)
+            .on('postgres_changes', {
+                event: 'INSERT',
+                schema: 'public',
+                table: 'support_messages',
+                filter: `lead_id=eq.${selectedLeadId}`
+            }, (payload) => {
+                setSupportMessages(prev => [...prev, payload.new]);
+            })
+            .subscribe();
+
+        return () => {
+            subscription.unsubscribe();
+        };
+    }, [selectedLeadId]);
+
+    const handleSendSupportMessage = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!supportInput.trim() || !selectedLeadId) return;
+
+        const content = supportInput.trim();
+        setSupportInput('');
+
+        try {
+            const { error } = await supabase
+                .from('support_messages')
+                .insert({
+                    lead_id: selectedLeadId,
+                    content,
+                    sender_type: 'admin'
+                });
+            if (error) throw error;
+        } catch (err) {
+            console.error('Error sending support message:', err);
+            alert('Erro ao enviar mensagem.');
+        }
+    };
 
     const checkUser = useCallback(async () => {
         const { data: { session } } = await supabase.auth.getSession();
@@ -410,7 +474,8 @@ export default function Admin() {
                             <p className="text-[10px] uppercase font-bold text-gray-400 mb-4 px-8 tracking-widest">Dashboard</p>
                             <nav className="space-y-1">
                                 <SidebarItem id="leads" label="Leads" icon={Users} />
-                                <SidebarItem id="chats" label="Conversas" icon={MessageSquare} />
+                                <SidebarItem id="support" label="Suporte Chat" icon={Headset} />
+                                <SidebarItem id="chats" label="Conversas IA" icon={MessageSquare} />
                             </nav>
                         </div>
 
@@ -577,6 +642,7 @@ export default function Admin() {
                                                             <tr className="bg-white/[0.01]">
                                                                 <th className="text-[10px] font-bold text-gray-500 uppercase tracking-widest text-left" style={{ padding: '12px 24px' }}>Data</th>
                                                                 <th className="text-[10px] font-bold text-gray-500 uppercase tracking-widest text-left" style={{ padding: '12px 24px' }}>Lead</th>
+                                                                <th className="text-[10px] font-bold text-gray-500 uppercase tracking-widest text-left" style={{ padding: '12px 24px' }}>WhatsApp</th>
                                                                 <th className="text-[10px] font-bold text-gray-500 uppercase tracking-widest text-left" style={{ padding: '12px 24px' }}>Empresa</th>
                                                                 <th className="text-[10px] font-bold text-gray-500 uppercase tracking-widest text-left" style={{ padding: '12px 24px' }}>Status</th>
                                                                 <th className="text-[11px] font-bold text-gray-500 uppercase tracking-widest text-right" style={{ padding: '12px 24px' }}>Ações</th>
@@ -594,6 +660,7 @@ export default function Admin() {
                                                                             <span className="text-[11px] text-gray-400 mt-0.5">{lead.email}</span>
                                                                         </div>
                                                                     </td>
+                                                                    <td className="text-[11px] text-gray-300 font-mono" style={{ padding: '16px 24px' }}>{lead.whatsapp || '-'}</td>
                                                                     <td className="text-sm text-gray-300 font-medium" style={{ padding: '16px 24px' }}>{lead.company || '-'}</td>
                                                                     <td className="" style={{ padding: '16px 24px' }}>
                                                                         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold ${lead.status === 'completed'
@@ -620,6 +687,111 @@ export default function Admin() {
                                                             )}
                                                         </tbody>
                                                     </table>
+                                                </div>
+                                            </div>
+                                        ) : activeTab === 'support' ? (
+                                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[700px] overflow-hidden">
+                                                {/* Lead List for Support */}
+                                                <div className="lg:col-span-4 xl:col-span-3 bg-[#1c1c24] rounded-2xl border border-white/[0.05] overflow-hidden flex flex-col shadow-xl">
+                                                    <div className="p-4 border-b border-white/[0.05] bg-white/[0.01]">
+                                                        <h3 className="text-[10px] font-bold text-white mb-3 uppercase tracking-widest opacity-80">Leads Ativos</h3>
+                                                        <p className="text-[10px] text-gray-500 mb-4">Escolha um lead para prestar suporte.</p>
+                                                    </div>
+                                                    <div className="overflow-y-auto flex-1 custom-scrollbar divide-y divide-white/[0.02]">
+                                                        {leads.map((l) => (
+                                                            <button
+                                                                key={l.id}
+                                                                onClick={() => setSelectedLeadId(l.id)}
+                                                                className={`w-full text-left hover:bg-white/[0.03] transition-all group relative ${selectedLeadId === l.id
+                                                                    ? 'bg-blue-600/10 border-r-4 border-blue-600'
+                                                                    : 'border-r-4 border-transparent'
+                                                                    }`}
+                                                                style={{ padding: '16px 20px' }}
+                                                            >
+                                                                <div className="flex justify-between items-start mb-1">
+                                                                    <span className={`font-bold text-xs ${selectedLeadId === l.id ? 'text-blue-500' : 'text-white'}`}>
+                                                                        {l.company || l.name || 'Sem Identificação'}
+                                                                    </span>
+                                                                </div>
+                                                                <p className="text-[10px] text-gray-400 line-clamp-1 font-medium">{l.email}</p>
+                                                                <div className="flex items-center justify-between mt-2">
+                                                                    <span className={`text-[8px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${l.status === 'paid' ? 'bg-green-500/10 text-green-500' : 'bg-blue-500/10 text-blue-500'}`}>
+                                                                        {l.status === 'paid' ? 'Cliente' : 'Lead'}
+                                                                    </span>
+                                                                </div>
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+
+                                                {/* Support Chat Detail */}
+                                                <div className="lg:col-span-8 xl:col-span-9 bg-[#1c1c24] rounded-2xl border border-white/[0.05] overflow-hidden flex flex-col shadow-xl">
+                                                    {selectedLeadId ? (
+                                                        <>
+                                                            <div className="border-b border-white/[0.05] flex justify-between items-center bg-white/[0.01] p-4 px-6">
+                                                                <div className="flex items-center gap-4">
+                                                                    <div className="w-10 h-10 rounded-xl bg-blue-600/10 flex items-center justify-center text-blue-500 border border-blue-500/10">
+                                                                        <Headset className="w-5 h-5" />
+                                                                    </div>
+                                                                    <div>
+                                                                        <h3 className="font-bold text-white text-sm">{leads.find(l => l.id === selectedLeadId)?.company}</h3>
+                                                                        <div className="flex items-center gap-2">
+                                                                            <p className="text-[10px] text-gray-500 font-medium">{leads.find(l => l.id === selectedLeadId)?.name}</p>
+                                                                            <span className="text-gray-700">•</span>
+                                                                            <p className="text-[10px] text-blue-400 font-bold">{leads.find(l => l.id === selectedLeadId)?.whatsapp}</p>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex-1 overflow-y-auto space-y-4 custom-scrollbar bg-black/10 p-6">
+                                                                {supportMessages.length === 0 ? (
+                                                                    <div className="flex flex-col items-center justify-center h-full text-gray-600 opacity-50">
+                                                                        <MessageSquare className="w-12 h-12 mb-3" />
+                                                                        <p className="text-sm">Nenhuma mensagem ainda.</p>
+                                                                    </div>
+                                                                ) : (
+                                                                    supportMessages.map((msg) => (
+                                                                        <div key={msg.id} className={`flex ${msg.sender_type === 'admin' ? 'justify-end' : 'justify-start'}`}>
+                                                                            <div className={`max-w-[70%] ${msg.sender_type === 'admin' ? 'bg-blue-600 text-white' : 'bg-white/[0.08] text-gray-200'} p-4 rounded-2xl ${msg.sender_type === 'admin' ? 'rounded-br-none' : 'rounded-bl-none'} border border-white/[0.05] shadow-sm`}>
+                                                                                <p className="text-sm leading-relaxed">{msg.content}</p>
+                                                                                <p className="text-[9px] mt-2 opacity-50 font-bold tracking-widest uppercase">
+                                                                                    {msg.sender_type === 'admin' ? 'Admin' : 'Cliente'} • {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    ))
+                                                                )}
+                                                            </div>
+                                                            <form onSubmit={handleSendSupportMessage} className="p-4 bg-white/[0.01] border-t border-white/[0.05]">
+                                                                <div className="flex gap-3">
+                                                                    <input
+                                                                        type="text"
+                                                                        value={supportInput}
+                                                                        onChange={(e) => setSupportInput(e.target.value)}
+                                                                        placeholder="Digite sua resposta de suporte..."
+                                                                        className="flex-1 bg-[#16161f] border border-white/[0.08] rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500/50 transition-all"
+                                                                    />
+                                                                    <button
+                                                                        type="submit"
+                                                                        disabled={!supportInput.trim()}
+                                                                        className="p-2 bg-blue-600 text-white rounded-xl hover:bg-blue-500 transition-all disabled:opacity-50 disabled:grayscale"
+                                                                    >
+                                                                        <Send className="w-5 h-5" />
+                                                                    </button>
+                                                                </div>
+                                                            </form>
+                                                        </>
+                                                    ) : (
+                                                        <div className="flex-1 flex flex-col items-center justify-center text-center p-12">
+                                                            <div className="w-16 h-16 rounded-2xl bg-white/[0.01] flex items-center justify-center mb-6 border border-white/[0.03]">
+                                                                <Headset className="w-8 h-8 text-gray-700" />
+                                                            </div>
+                                                            <h3 className="text-lg font-bold text-white mb-2">Selecione um Cliente</h3>
+                                                            <p className="text-gray-500 text-xs max-w-xs leading-relaxed">
+                                                                Selecione um cliente na lista lateral para prestar assistência técnica em tempo real.
+                                                            </p>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         ) : activeTab === 'chats' ? (

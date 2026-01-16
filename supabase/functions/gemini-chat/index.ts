@@ -21,8 +21,35 @@ serve(async (req) => {
         if (!geminiApiKey) throw new Error('GEMINI_API_KEY is missing')
         if (!supabaseUrl || !supabaseServiceRoleKey) throw new Error('Supabase config is missing')
 
+        // Create Supabase client with Auth context to identify user
+        const authHeader = req.headers.get('Authorization')
+        if (!authHeader) {
+            // Allow anon access, but we won't have user context
+        }
+
         const supabase = createClient(supabaseUrl, supabaseServiceRoleKey)
         const genAI = new GoogleGenerativeAI(geminiApiKey)
+
+        // Identify User
+        let userContext = "";
+        if (authHeader) {
+            const supabaseAuth = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY') || '', {
+                global: { headers: { Authorization: authHeader } }
+            })
+            const { data: { user } } = await supabaseAuth.auth.getUser()
+
+            if (user) {
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('full_name, company_name, email')
+                    .eq('id', user.id)
+                    .single()
+
+                if (profile) {
+                    userContext = `\n\nCONTEXTO DO CLIENTE ATUAL:\nNome: ${profile.full_name || 'Não informado'}\nEmpresa: ${profile.company_name || 'Não informada'}\nEmail: ${profile.email}\nUse essas informações para personalizar o atendimento, chamando-o pelo nome quando apropriado.`
+                }
+            }
+        }
 
         // Fetch instructions from DB
         const { data: configData } = await supabase
@@ -31,7 +58,8 @@ serve(async (req) => {
             .eq('key', 'ai_instructions')
             .single()
 
-        const systemInstruction = configData?.value || "Você é um assistente virtual da GYODA."
+        const baseInstruction = configData?.value || "Você é um assistente virtual da GYODA."
+        const systemInstruction = baseInstruction + userContext
 
         // Priority list of stable models with better quotas
         const modelsToTry = [

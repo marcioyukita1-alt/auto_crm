@@ -50,8 +50,21 @@ const Landing = () => {
                         </div>
                         <span className="logo-text">GYODA</span>
                     </div>
-                    <div className="nav-links">
-                        <a href="#services" className="nav-link" aria-label="Ir para seção de serviços">Serviços</a>
+                    <div className="nav-links" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                        <button
+                            onClick={() => window.location.href = '/auth'}
+                            className="nav-link"
+                            style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '1rem' }}
+                        >
+                            Entrar
+                        </button>
+                        <button
+                            onClick={() => window.location.href = '/auth?mode=signup'}
+                            className="btn btn-primary"
+                            style={{ padding: '0.5rem 1.5rem', borderRadius: '2rem', fontSize: '0.9rem' }}
+                        >
+                            Cadastre-se
+                        </button>
                     </div>
                 </div>
             </nav>

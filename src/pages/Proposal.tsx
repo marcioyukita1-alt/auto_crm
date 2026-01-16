@@ -1,12 +1,23 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import SEO from '../components/SEO';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, CreditCard, Download, FileText, Loader2, Rocket, ShieldCheck, Info } from 'lucide-react';
+import {
+    Check, CreditCard, Download, FileText, Loader2, Rocket,
+    ShieldCheck, Info, Headset, FolderOpen,
+    LayoutDashboard, Bot, Zap
+} from 'lucide-react';
 import type { Database } from '../types/supabase';
+import FileManager from '../components/FileManager';
+import SupportChat from '../components/SupportChat';
+import { EmbeddedChat } from '../components/GeminiChat';
 
-type Lead = Database['public']['Tables']['leads']['Row'];
+type Lead = Database['public']['Tables']['leads']['Row'] & {
+    project_status?: 'proposal' | 'development' | 'testing' | 'completed';
+};
+
+type TabId = 'proposal' | 'files' | 'ai-chat' | 'support';
 
 const Proposal = () => {
     const { id } = useParams();
@@ -15,17 +26,18 @@ const Proposal = () => {
     const [prices, setPrices] = useState<Record<string, number>>({});
     const [acceptedContract, setAcceptedContract] = useState(false);
     const [showTerms, setShowTerms] = useState(false);
-    const navigate = useNavigate();
+    const [activeTab, setActiveTab] = useState<TabId>('proposal');
 
     useEffect(() => {
         const fetchData = async () => {
             // Fetch lead
             const { data: leadData, error: leadError } = await supabase.from('leads').select('*').eq('id', id).single();
             if (leadError) {
-                alert('Proposta não encontrada.');
+                console.error('Error fetching lead:', leadError);
+                setLoading(false);
                 return;
             }
-            setLead(leadData);
+            setLead(leadData as Lead);
 
             // Fetch prices from config
             const { data: configData } = await supabase.from('config').select('*').eq('key', 'base_prices').single();
@@ -50,98 +62,211 @@ const Proposal = () => {
         setTimeout(() => {
             setLoading(false);
             alert('Sucesso! Pagamento processado e projeto iniciado na GYODA.');
-            navigate('/');
+            setLead(prev => prev ? { ...prev, status: 'paid' } : null);
+            setActiveTab('support');
         }, 2000);
     };
 
     if (loading) return (
         <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--background)' }}>
-            <Loader2 className="icon-spin" size={48} color="var(--accent)" />
+            <Loader2 className="animate-spin" size={48} color="var(--accent)" />
         </div>
     );
 
     const basePrice = prices[lead?.project_type as string] || 5000;
     const deliveryTime = lead?.project_type === 'ai' ? '4 a 6 semanas' : '3 a 5 semanas';
+    const isPaid = lead?.status === 'paid' || lead?.status === 'contacted'; // Assuming 'contacted' might also mean active for demo
+
+    const TabButton = ({ id, label, icon: Icon }: { id: TabId, label: string, icon: any }) => (
+        <button
+            onClick={() => setActiveTab(id)}
+            style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.6rem',
+                padding: '0.75rem 1.25rem',
+                borderRadius: '1rem',
+                background: activeTab === id ? 'rgba(37, 99, 235, 0.1)' : 'transparent',
+                color: activeTab === id ? 'var(--accent)' : 'var(--muted-foreground)',
+                border: activeTab === id ? '1px solid rgba(37, 99, 235, 0.2)' : '1px solid transparent',
+                fontWeight: activeTab === id ? 700 : 500,
+                transition: '0.2s',
+                cursor: 'pointer'
+            }}
+        >
+            <Icon size={18} />
+            {label}
+        </button>
+    );
 
     return (
-        <div style={{ minHeight: '100vh', background: 'var(--background)', color: 'white', padding: '4rem 1rem' }}>
-            <SEO title="Proposta Técnica" />
-            <div className="container" style={{ maxWidth: '800px' }}>
-                <header style={{ textAlign: 'center', marginBottom: '4rem' }}>
-                    <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
-                        <FileText size={48} color="var(--accent)" style={{ marginBottom: '1.5rem' }} />
-                        <h1 style={{ fontSize: '3.5rem', fontWeight: 900, letterSpacing: '-0.05em' }}>Proposta Técnica</h1>
-                        <p style={{ color: 'var(--muted-foreground)', fontSize: '1.25rem' }}>Para: <span style={{ color: 'white', fontWeight: 700 }}>{lead?.company}</span> ({lead?.name})</p>
+        <div style={{ minHeight: '100vh', background: 'var(--background)', color: 'white', padding: '2rem 1rem' }}>
+            <SEO title="Portal do Cliente | GYODA" />
+
+            <div className="container" style={{ maxWidth: '1000px' }}>
+                {/* Header with Project Status */}
+                <header style={{ marginBottom: '3rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '2rem' }}>
+                    <motion.div initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+                            <div style={{ padding: '0.75rem', background: 'rgba(37, 99, 235, 0.15)', borderRadius: '1rem', color: 'var(--accent)' }}>
+                                <LayoutDashboard size={24} />
+                            </div>
+                            <div>
+                                <h1 style={{ fontSize: '2rem', fontWeight: 900, margin: 0, letterSpacing: '-0.02em' }}>Portal do Cliente</h1>
+                                <p style={{ color: 'var(--muted-foreground)', margin: 0 }}>Projeto: <span style={{ color: 'white', fontWeight: 600 }}>{lead?.company}</span></p>
+                            </div>
+                        </div>
                     </motion.div>
+
+                    <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(255,255,255,0.03)', padding: '0.5rem', borderRadius: '1.25rem', border: '1px solid var(--border)' }}>
+                        <TabButton id="proposal" label="Proposta" icon={FileText} />
+                        <TabButton id="ai-chat" label="Solange AI" icon={Bot} />
+                        <TabButton id="support" label="Suporte" icon={Headset} />
+                        <TabButton id="files" label="Arquivos" icon={FolderOpen} />
+                    </div>
                 </header>
 
-                <main className="glass" style={{ padding: '3rem', borderRadius: '2.5rem' }}>
-                    <section style={{ marginBottom: '3.5rem' }}>
-                        <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                            <Rocket size={22} color="var(--accent)" /> Visão Estratégica
-                        </h3>
-                        <div style={{ marginBottom: '2rem', borderRadius: '1.5rem', overflow: 'hidden', border: '1px solid var(--border)', height: '250px' }}>
-                            <img src="/gyoda_hero_tech_abstract_1768306538996.png" alt="Engineering" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        </div>
-                        <div style={{ padding: '2rem', background: 'rgba(255,255,255,0.03)', borderRadius: '1.25rem', border: '1px solid var(--border)', lineHeight: '1.6' }}>
-                            <p style={{ color: '#d1d1d6', margin: 0 }}>{lead?.requirements}</p>
-                        </div>
-                    </section>
-
-                    <section style={{ marginBottom: '3.5rem' }}>
-                        <h3 style={{ marginBottom: '1.5rem' }}>Metodologia e Entregáveis</h3>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-                            <BenefitItem text="Arquitetura de Microserviços" />
-                            <BenefitItem text="Interface UI/UX de Alta Performance" />
-                            <BenefitItem text="Segurança de Dados e RLS" />
-                            <BenefitItem text="Infraestrutura Serverless Escalável" />
-                        </div>
-                    </section>
-
-                    <section style={{ padding: '2.5rem', background: 'rgba(59, 130, 246, 0.05)', borderRadius: '1.5rem', border: '1px solid rgba(59, 130, 246, 0.2)', marginBottom: '3.5rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
-                            <input
-                                type="checkbox"
-                                id="contract"
-                                checked={acceptedContract}
-                                onChange={(e) => setAcceptedContract(e.target.checked)}
-                                style={{ width: '20px', height: '20px', accentColor: 'var(--accent)', cursor: 'pointer' }}
-                            />
-                            <label htmlFor="contract" style={{ fontSize: '1rem', fontWeight: 600, cursor: 'pointer' }}>
-                                Li e concordo com os <button onClick={() => setShowTerms(true)} style={{ color: 'var(--accent)', background: 'none', border: 'none', padding: 0, fontWeight: 700, cursor: 'pointer', textDecoration: 'underline' }}>Termos de Adesão e Contrato Prestação de Serviços GYODA</button>.
-                            </label>
-                        </div>
-                        <p style={{ fontSize: '0.875rem', color: 'var(--muted-foreground)', margin: 0 }}>
-                            Ao marcar esta caixa, você formaliza o interesse no desenvolvimento e autoriza o processamento inicial.
-                        </p>
-                    </section>
-
-                    <footer style={{ paddingTop: '3rem', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '2rem' }}>
-                        <div>
-                            <span className="label">Investimento Total</span>
-                            <div style={{ fontSize: '3rem', fontWeight: 900, color: 'var(--accent)' }}>
-                                R$ {basePrice.toLocaleString('pt-BR')}
-                            </div>
-                            <p style={{ fontSize: '0.875rem', color: 'var(--muted-foreground)', marginTop: '0.5rem' }}>Início imediato após confirmação • Prazo: {deliveryTime}</p>
-                        </div>
-
-                        <div style={{ display: 'flex', gap: '1rem' }}>
-                            <button className="btn btn-outline btn-lg" style={{ color: 'white' }}><Download size={20} /> PDF</button>
-                            <button
-                                onClick={handlePayment}
-                                className={`btn btn-lg ${acceptedContract ? 'btn-accent' : ''} `}
-                                style={{ opacity: acceptedContract ? 1 : 0.5, cursor: acceptedContract ? 'pointer' : 'not-allowed', padding: '1rem 2rem' }}
+                <main>
+                    <AnimatePresence mode="wait">
+                        {activeTab === 'proposal' && (
+                            <motion.div
+                                key="proposal"
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -20 }}
+                                className="glass"
+                                style={{ padding: '3rem', borderRadius: '2.5rem' }}
                             >
-                                <CreditCard size={20} /> Iniciar Projeto Agora
-                            </button>
-                        </div>
-                    </footer>
+                                <section style={{ marginBottom: '3.5rem' }}>
+                                    <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                        <Rocket size={22} color="var(--accent)" /> Visão Estratégica
+                                    </h3>
+                                    <div style={{ marginBottom: '2rem', borderRadius: '1.5rem', overflow: 'hidden', border: '1px solid var(--border)', height: '250px' }}>
+                                        <img src="/gyoda_hero_tech_abstract_1768306538996.png" alt="Engineering" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    </div>
+                                    <div style={{ padding: '2rem', background: 'rgba(255,255,255,0.03)', borderRadius: '1.25rem', border: '1px solid var(--border)', lineHeight: '1.6' }}>
+                                        <p style={{ color: '#d1d1d6', margin: 0 }}>{lead?.requirements}</p>
+                                    </div>
+                                </section>
+
+                                <section style={{ marginBottom: '3.5rem' }}>
+                                    <h3 style={{ marginBottom: '1.5rem' }}>Metodologia e Entregáveis</h3>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(200px, 1fr) minmax(200px, 1fr)', gap: '1.5rem' }}>
+                                        <BenefitItem text="Arquitetura de Microserviços" />
+                                        <BenefitItem text="Interface UI/UX de Alta Performance" />
+                                        <BenefitItem text="Segurança de Dados e RLS" />
+                                        <BenefitItem text="Infraestrutura Serverless Escalável" />
+                                    </div>
+                                </section>
+
+                                {!isPaid && (
+                                    <section style={{ padding: '2.5rem', background: 'rgba(59, 130, 246, 0.05)', borderRadius: '1.5rem', border: '1px solid rgba(59, 130, 246, 0.2)', marginBottom: '3.5rem' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+                                            <input
+                                                type="checkbox"
+                                                id="contract"
+                                                checked={acceptedContract}
+                                                onChange={(e) => setAcceptedContract(e.target.checked)}
+                                                style={{ width: '20px', height: '20px', accentColor: 'var(--accent)', cursor: 'pointer' }}
+                                            />
+                                            <label htmlFor="contract" style={{ fontSize: '1rem', fontWeight: 600, cursor: 'pointer' }}>
+                                                Li e concordo com os <button onClick={() => setShowTerms(true)} style={{ color: 'var(--accent)', background: 'none', border: 'none', padding: 0, fontWeight: 700, cursor: 'pointer', textDecoration: 'underline' }}>Termos de Adesão e Contrato Prestação de Serviços GYODA</button>.
+                                            </label>
+                                        </div>
+                                        <p style={{ fontSize: '0.875rem', color: 'var(--muted-foreground)', margin: 0 }}>
+                                            Ao marcar esta caixa, você formaliza o interesse no desenvolvimento e autoriza o processamento inicial.
+                                        </p>
+                                    </section>
+                                )}
+
+                                <footer style={{ paddingTop: '3rem', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '2rem' }}>
+                                    <div>
+                                        <span className="label">Investimento Total</span>
+                                        <div style={{ fontSize: '3rem', fontWeight: 900, color: 'var(--accent)' }}>
+                                            R$ {basePrice.toLocaleString('pt-BR')}
+                                        </div>
+                                        <p style={{ fontSize: '0.875rem', color: 'var(--muted-foreground)', marginTop: '0.5rem' }}>Início imediato após confirmação • Prazo: {deliveryTime}</p>
+                                    </div>
+
+                                    <div style={{ display: 'flex', gap: '1rem' }}>
+                                        <button className="btn btn-outline btn-lg" style={{ color: 'white' }}><Download size={20} /> PDF</button>
+                                        {!isPaid && (
+                                            <button
+                                                onClick={handlePayment}
+                                                className={`btn btn-lg ${acceptedContract ? 'btn-accent' : ''} `}
+                                                style={{ opacity: acceptedContract ? 1 : 0.5, cursor: acceptedContract ? 'pointer' : 'not-allowed', padding: '1rem 2rem' }}
+                                            >
+                                                <CreditCard size={20} /> Iniciar Projeto Agora
+                                            </button>
+                                        )}
+                                        {isPaid && (
+                                            <div style={{ padding: '0.75rem 1.5rem', background: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.2)', color: '#22c55e', borderRadius: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700 }}>
+                                                <Check size={20} /> Projeto Ativo
+                                            </div>
+                                        )}
+                                    </div>
+                                </footer>
+                            </motion.div>
+                        )}
+
+                        {activeTab === 'ai-chat' && (
+                            <motion.div
+                                key="ai-chat"
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -20 }}
+                                style={{ height: '600px', display: 'flex', borderRadius: '2.5rem', overflow: 'hidden' }}
+                                className="glass"
+                            >
+                                <div style={{ flex: 1, position: 'relative' }}>
+                                    <EmbeddedChat autoLoad={true} />
+                                </div>
+                                <div style={{ width: '300px', padding: '2rem', borderLeft: '1px solid var(--border)', display: 'none', background: 'rgba(255,255,255,0.01)' }} className="desktop-only">
+                                    <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                                        <Bot size={18} color="var(--accent)" /> Solange AI
+                                    </h4>
+                                    <p style={{ fontSize: '0.875rem', color: 'var(--muted-foreground)', lineHeight: '1.6' }}>
+                                        Nossa inteligência artificial está pronta para tirar dúvidas sobre seu projeto, prazos e tecnologias utilizadas.
+                                    </p>
+                                    <div style={{ marginTop: '2rem', padding: '1rem', background: 'rgba(37, 99, 235, 0.05)', borderRadius: '1rem', border: '1px solid rgba(37, 99, 235, 0.1)' }}>
+                                        <p style={{ fontSize: '0.75rem', color: 'var(--accent)', fontWeight: 700, margin: '0 0 0.5rem 0', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Prompt Especializado</p>
+                                        <p style={{ fontSize: '0.8125rem', color: 'rgba(255,255,255,0.7)', margin: 0 }}>
+                                            "Solange, qual o status atual do meu projeto {lead?.company}?"
+                                        </p>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        )}
+
+                        {activeTab === 'support' && (
+                            <motion.div
+                                key="support"
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -20 }}
+                            >
+                                <SupportChat leadId={id as string} />
+                            </motion.div>
+                        )}
+
+                        {activeTab === 'files' && (
+                            <motion.div
+                                key="files"
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -20 }}
+                            >
+                                <FileManager leadId={id as string} />
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </main>
 
-                <div style={{ marginTop: '4rem', textAlign: 'center', display: 'flex', justifyContent: 'center', gap: '4rem' }}>
+                <div style={{ marginTop: '4rem', textAlign: 'center', display: 'flex', justifyContent: 'center', gap: '4rem', flexWrap: 'wrap' }}>
                     <Badge icon={<ShieldCheck size={20} />} text="Garantia de Entrega" />
                     <Badge icon={<Info size={20} />} text="Suporte 24/7" />
                     <Badge icon={<Check size={20} />} text="Propriedade do Código" />
+                    <Badge icon={<Zap size={20} />} text="Performance de Elite" />
                 </div>
             </div>
 
@@ -187,8 +312,9 @@ const BenefitItem = ({ text }: { text: string }) => (
 
 const Badge = ({ icon, text }: { icon: React.ReactNode, text: string }) => (
     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'var(--muted-foreground)', fontSize: '1rem' }}>
-        {icon} {text}
+        <div style={{ color: 'var(--accent)' }}>{icon}</div> {text}
     </div>
 );
 
 export default Proposal;
+

@@ -63,6 +63,7 @@ export interface Database {
                     requirements: string | null
                     status: string | null
                     stripe_session_id: string | null
+                    whatsapp: string | null
                 }
                 Insert: {
                     budget_range?: string | null

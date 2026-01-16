@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Send, Bot, User, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { useLocation } from 'react-router-dom';
 import './GeminiChat.css';
 
 interface Message {
@@ -39,21 +40,34 @@ export function EmbeddedChat({ autoLoad = true }: EmbeddedChatProps) {
     }, []);
 
     // Load History from Supabase
+    // Load History from Supabase (User + Session)
     useEffect(() => {
         if (!sessionId || !autoLoad) return;
 
         const loadHistory = async () => {
-            const { data } = await supabase
+            const { data: { user } } = await supabase.auth.getUser();
+
+            let query = supabase
                 .from('chat_messages')
                 .select('*')
-                .eq('session_id', sessionId)
                 .order('created_at', { ascending: true });
+
+            if (user) {
+                // Determine logic: fetch by user_id OR session_id to merge contexts
+                query = query.or(`user_id.eq.${user.id},session_id.eq.${sessionId}`);
+            } else {
+                query = query.eq('session_id', sessionId);
+            }
+
+            const { data } = await query;
 
             if (data) {
                 const formattedMessages: Message[] = data.map(msg => ({
                     role: msg.role as 'user' | 'model',
                     parts: msg.content
                 }));
+                // Remove duplicates if any (simple check based on content/order, or just trust DB)
+                // For now trusting DB distinct/order
                 setMessages(formattedMessages);
             }
         };
@@ -121,6 +135,35 @@ export function EmbeddedChat({ autoLoad = true }: EmbeddedChatProps) {
 
     return (
         <div className="embedded-chat-container">
+            {/* Header */}
+            <div className="embedded-chat-header" style={{
+                background: 'linear-gradient(to right, rgba(37, 99, 235, 0.1), rgba(124, 58, 237, 0.1))', // Subtle gradient
+                padding: '1rem 1.5rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem',
+                borderBottom: '1px solid rgba(37, 99, 235, 0.2)'
+            }}>
+                <div style={{
+                    background: 'rgba(37, 99, 235, 0.2)', // Subtle icon bg
+                    padding: '0.5rem',
+                    borderRadius: '0.75rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 0 10px rgba(37, 99, 235, 0.2)'
+                }}>
+                    <Bot size={20} color="#60a5fa" /> {/* Lighter blue icon */}
+                </div>
+                <div>
+                    <h3 style={{ margin: 0, color: 'white', fontSize: '1rem', fontWeight: 600, letterSpacing: '0.02em' }}>Atendimento</h3>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 5px #22c55e' }}></span>
+                        <p style={{ margin: 0, color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem' }}>IA Solange Online</p>
+                    </div>
+                </div>
+            </div>
+
             {/* Messages */}
             <div className="embedded-chat-messages">
                 {messages.length === 0 && (
@@ -182,7 +225,8 @@ export function EmbeddedChat({ autoLoad = true }: EmbeddedChatProps) {
 }
 
 export default function GeminiChat() {
-    const [isOpen, setIsOpen] = useState(false);
+    const [isMinimized, setIsMinimized] = useState(false);
+    const location = useLocation();
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -194,8 +238,10 @@ export default function GeminiChat() {
     };
 
     useEffect(() => {
-        scrollToBottom();
-    }, [messages]);
+        if (!isMinimized) {
+            scrollToBottom();
+        }
+    }, [messages, isMinimized]);
 
     // Initialize Session ID
     useEffect(() => {
@@ -206,22 +252,31 @@ export default function GeminiChat() {
         }
         setSessionId(storedSession);
 
-        // External trigger
-        const handleOpenChat = () => setIsOpen(true);
+        // External trigger now just maximizes
+        const handleOpenChat = () => setIsMinimized(false);
         window.addEventListener('open-gyoda-chat', handleOpenChat);
         return () => window.removeEventListener('open-gyoda-chat', handleOpenChat);
     }, []);
 
-    // Load History from Supabase
+    // Load History from Supabase (User + Session)
     useEffect(() => {
-        if (!sessionId || !isOpen) return;
+        if (!sessionId) return;
 
         const loadHistory = async () => {
-            const { data } = await supabase
+            const { data: { user } } = await supabase.auth.getUser();
+
+            let query = supabase
                 .from('chat_messages')
                 .select('*')
-                .eq('session_id', sessionId)
                 .order('created_at', { ascending: true });
+
+            if (user) {
+                query = query.or(`user_id.eq.${user.id},session_id.eq.${sessionId}`);
+            } else {
+                query = query.eq('session_id', sessionId);
+            }
+
+            const { data } = await query;
 
             if (data) {
                 const formattedMessages: Message[] = data.map(msg => ({
@@ -233,7 +288,7 @@ export default function GeminiChat() {
         };
 
         loadHistory();
-    }, [sessionId, isOpen]);
+    }, [sessionId]);
 
     const saveMessageToDb = async (role: 'user' | 'model', content: string) => {
         if (!sessionId) return;
@@ -293,83 +348,123 @@ export default function GeminiChat() {
         }
     };
 
-    if (!isOpen) return null;
+    // Don't render floating chat on Auth page since it has EmbeddedChat
+    if (location.pathname === '/auth') return null;
 
     return (
         <motion.div
-            initial={{ opacity: 0, y: 20, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.9 }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{
+                opacity: 1,
+                y: 0,
+                height: isMinimized ? '60px' : '600px',
+                width: isMinimized ? '200px' : '400px'
+            }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
             className="gemini-chat-widget"
+            style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
         >
             {/* Header */}
-            <div className="gemini-chat-header">
-                <div className="gemini-chat-title">
-                    <img src="/logo_g.svg" alt="Gyoda Logo" style={{ width: '24px', height: '24px', objectFit: 'contain' }} />
-                    <span>Atendente do Grupo</span>
+            <div
+                className="gemini-chat-header"
+                onClick={() => setIsMinimized(!isMinimized)}
+                style={{
+                    cursor: 'pointer',
+                    background: 'linear-gradient(to right, rgba(37, 99, 235, 0.1), rgba(124, 58, 237, 0.1))',
+                    padding: '1rem 1.5rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    borderBottom: '1px solid rgba(37, 99, 235, 0.2)'
+                }}
+            >
+                <div style={{
+                    background: 'rgba(37, 99, 235, 0.2)',
+                    padding: '0.5rem',
+                    borderRadius: '0.75rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 0 10px rgba(37, 99, 235, 0.2)'
+                }}>
+                    <Bot size={20} color="#60a5fa" />
+                </div>
+                <div className="gemini-chat-title" style={{ flex: 1 }}>
+                    <h3 style={{ margin: 0, color: 'white', fontSize: '1rem', fontWeight: 600, letterSpacing: '0.02em' }}>
+                        {isMinimized ? 'Conversar' : 'Atendimento'}
+                    </h3>
+                    {!isMinimized && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.1rem' }}>
+                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 5px #22c55e' }}></span>
+                            <p style={{ margin: 0, color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem' }}>IA Solange Online</p>
+                        </div>
+                    )}
                 </div>
                 <button
-                    onClick={() => setIsOpen(false)}
+                    onClick={(e) => { e.stopPropagation(); setIsMinimized(!isMinimized); }}
                     className="gemini-chat-close"
                 >
-                    <X className="w-5 h-5" />
+                    {isMinimized ? <Bot className="w-5 h-5" /> : <X className="w-5 h-5" />}
                 </button>
             </div>
 
-            {/* Messages */}
-            <div className="gemini-chat-messages">
-                {messages.length === 0 && (
-                    <div className="gemini-chat-welcome">
-                        <p>Olá! Como posso ajudar você hoje?</p>
-                    </div>
-                )}
-                {messages.map((msg, idx) => (
-                    <div
-                        key={idx}
-                        className={`message-row ${msg.role}`}
-                    >
-                        <div className={`message-bubble ${msg.role}`}>
-                            <div className="message-content">
-                                {msg.role === 'model' && <Bot size={16} style={{ marginTop: 4 }} />}
-                                {msg.role === 'user' && <User size={16} style={{ marginTop: 4 }} />}
-                                <span style={{ flex: 1 }}>{msg.parts}</span>
+            {/* Content Container - hidden when minimized to prevent layout issues */}
+            <div style={{ flex: 1, display: isMinimized ? 'none' : 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                {/* Messages */}
+                <div className="gemini-chat-messages">
+                    {messages.length === 0 && (
+                        <div className="gemini-chat-welcome">
+                            <p>Olá! Sou a Solange, IA da Gyoda. Como posso ajudar você hoje?</p>
+                        </div>
+                    )}
+                    {messages.map((msg, idx) => (
+                        <div
+                            key={idx}
+                            className={`message-row ${msg.role}`}
+                        >
+                            <div className={`message-bubble ${msg.role}`}>
+                                <div className="message-content">
+                                    {msg.role === 'model' && <Bot size={16} style={{ marginTop: 4 }} />}
+                                    {msg.role === 'user' && <User size={16} style={{ marginTop: 4 }} />}
+                                    <span style={{ flex: 1 }}>{msg.parts}</span>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                ))}
-                {isLoading && (
-                    <div className="message-row model">
-                        <div className="message-bubble model">
-                            <div className="typing-indicator">
-                                <div className="typing-dot" />
-                                <div className="typing-dot" />
-                                <div className="typing-dot" />
+                    ))}
+                    {isLoading && (
+                        <div className="message-row model">
+                            <div className="message-bubble model">
+                                <div className="typing-indicator">
+                                    <div className="typing-dot" />
+                                    <div className="typing-dot" />
+                                    <div className="typing-dot" />
+                                </div>
                             </div>
                         </div>
-                    </div>
-                )}
-                <div ref={messagesEndRef} />
-            </div>
-
-            {/* Input */}
-            <form onSubmit={handleSubmit} className="gemini-chat-form">
-                <div className="input-container">
-                    <input
-                        type="text"
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        placeholder="Digite sua mensagem..."
-                        className="chat-input"
-                    />
-                    <button
-                        type="submit"
-                        disabled={isLoading || !input.trim()}
-                        className="send-button"
-                    >
-                        <Send className="w-5 h-5" />
-                    </button>
+                    )}
+                    <div ref={messagesEndRef} />
                 </div>
-            </form>
+
+                {/* Input */}
+                <form onSubmit={handleSubmit} className="gemini-chat-form">
+                    <div className="input-container">
+                        <input
+                            type="text"
+                            value={input}
+                            onChange={(e) => setInput(e.target.value)}
+                            placeholder="Digite sua mensagem..."
+                            className="chat-input"
+                        />
+                        <button
+                            type="submit"
+                            disabled={isLoading || !input.trim()}
+                            className="send-button"
+                        >
+                            <Send className="w-5 h-5" />
+                        </button>
+                    </div>
+                </form>
+            </div>
         </motion.div>
     );
 }
