@@ -363,7 +363,7 @@ export default function Admin() {
         return matchesSearch && matchesStatus;
     });
 
-    const SidebarItem = ({ id, label, icon: Icon }: { id: 'leads' | 'chats' | 'settings', label: string, icon: React.ElementType }) => (
+    const SidebarItem = ({ id, label, icon: Icon }: { id: 'leads' | 'chats' | 'settings' | 'support', label: string, icon: React.ElementType }) => (
         <button
             onClick={() => {
                 setActiveTab(id);
